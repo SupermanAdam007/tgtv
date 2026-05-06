@@ -14,7 +14,6 @@ npm install
 | App | Type | Description |
 |-----|------|-------------|
 | `app1/` | Packaged | Hello World — dev environment baseline |
-| `skyshowtime/` | Hosted | Redirects to skyshowtime.com |
 
 ## Dev workflow
 
