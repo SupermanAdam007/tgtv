@@ -1,0 +1,86 @@
+<!--
+Copyright (c) 2020-2023 LG Electronics Inc.
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Example Web App</title>
+<style type="text/css">
+    body {
+        width: 100%;
+        height: 100%;
+        background-color:#202020;
+    }
+    div {
+        position:absolute;
+        height:100%;
+        width:100%;
+        display: table;
+    }
+    h1 {
+        display: table-cell;
+        vertical-align: middle;
+        text-align:center;
+        color:#FFFFFF;
+    }
+</style>
+<script type="text/javascript">
+// ── Dev log relay ─────────────────────────────────────────────────────────────
+// Forwards console.log/warn/error to the local log server (scripts/log-server.js).
+// Safe to leave in: if the server is not running, logs are silently skipped.
+(function() {
+  var LOG_URL = 'http://127.0.0.1:9999/log';
+  ['log', 'warn', 'error', 'info'].forEach(function(level) {
+    var orig = console[level].bind(console);
+    console[level] = function() {
+      orig.apply(console, arguments);
+      var args = Array.prototype.slice.call(arguments).map(function(a) {
+        return typeof a === 'object' ? JSON.stringify(a) : String(a);
+      });
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', LOG_URL, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ level: level, args: args, ts: new Date().toISOString() }));
+    };
+  });
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
+window.onload = function() {
+    var label = document.getElementById("txt_msg");
+
+    function showTime(utcSeconds) {
+        var d = utcSeconds ? new Date(utcSeconds * 1000) : new Date();
+        label.innerHTML = "Hello, webOS!<br><small>" + d.toLocaleTimeString() + "</small>";
+    }
+
+    // Try Luna system time; fall back to JS Date in the simulator where it's unavailable.
+    try {
+        var bridge = new WebOSServiceBridge();
+        bridge.onservicecallback = function(msg) {
+            var res = JSON.parse(msg);
+            if (res.returnValue) {
+                console.log("getSystemTime OK, utc:", res.utc);
+                showTime(res.utc);
+            } else {
+                console.warn("getSystemTime unavailable (" + res.errorText + "), using JS Date");
+                showTime();
+            }
+        };
+        bridge.call("luna://com.webos.service.systemservice/time/getSystemTime", "{}");
+    } catch (e) {
+        console.warn("WebOSServiceBridge unavailable, using JS Date");
+        showTime();
+    }
+}
+</script>
+</head>
+<body>
+    <div>
+        <h1 id="txt_msg">Hello, Web Application!!-</h1>
+    </div>
+</body>
+</html>

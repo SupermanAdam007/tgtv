@@ -1,0 +1,20 @@
+{
+  "name": "tgtv",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "simulator": "open ~/Downloads/webOS_TV_6.0_Simulator_1.4.1/webOS_TV_6.0_Simulator_1.4.1.app",
+    "log": "node scripts/log-server.js",
+    "devices": "ares-setup-device --list",
+    "pack": "ares-package",
+    "install:app": "ares-install",
+    "launch": "ares-launch",
+    "inspect": "ares-inspect"
+  },
+  "devDependencies": {
+    "@webosose/ares-cli": "*"
+  }
+}

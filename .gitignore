@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+*.ipk
+dist/
+
+# Debug
+debug.log
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+*.swp
