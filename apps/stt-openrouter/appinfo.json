@@ -1,0 +1,15 @@
+{
+  "id": "com.tgtv.sttopenrouter",
+  "version": "0.0.1",
+  "vendor": "tgtv",
+  "type": "web",
+  "main": "index.html",
+  "title": "STT OpenRouter",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#121212",
+  "requiredPermissions": [
+    "time.query",
+    "activity.operation"
+  ]
+}

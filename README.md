@@ -14,6 +14,8 @@ npm install
 | App | Type | Description |
 |-----|------|-------------|
 | `apps/app1/` | Packaged | Hello World — dev environment baseline |
+| `apps/stt-openrouter/` | Packaged | Mic → OpenRouter STT (`/api/v1/audio/transcriptions`) test |
+| `apps/voice-fx/` | Packaged | Real-time microphone voice distortion (8 effects) |
 
 ## Dev workflow
 
@@ -36,6 +38,14 @@ npx ares-novacom --device myTV --getkey
 npx ares-package ./apps/app1
 npx ares-install --device myTV ./com.tgtv.app1_0.0.1_all.ipk
 npx ares-launch --device myTV com.tgtv.app1
+
+# STT test app (after `npx ares-package ./apps/stt-openrouter`)
+npx ares-install --device myTV ./com.tgtv.sttopenrouter_0.0.1_all.ipk
+npx ares-launch --device myTV com.tgtv.sttopenrouter
+
+# Voice FX app (after `npx ares-package ./apps/voice-fx`)
+npx ares-install --device myTV ./com.tgtv.voicefx_0.0.1_all.ipk
+npx ares-launch --device myTV com.tgtv.voicefx
 ```
 
 ## Cursor skills

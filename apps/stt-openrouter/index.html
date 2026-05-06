@@ -1,0 +1,728 @@
+<!--
+  Speech-to-text test app: records microphone audio, sends it to OpenRouter STT.
+  Docs: https://openrouter.ai/docs/guides/overview/multimodal/stt
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>STT OpenRouter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style type="text/css">
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #121212;
+    color: #ececec;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 22px;
+  }
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 40px 48px;
+  }
+  h1 {
+    font-size: 1.35em;
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+  }
+  .sub {
+    font-size: 0.75em;
+    color: #9aa0a6;
+    margin: 0 0 28px;
+    line-height: 1.45;
+  }
+  label {
+    display: block;
+    font-size: 0.75em;
+    color: #b0b6bc;
+    margin: 16px 0 6px;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid #3c4043;
+    background: #1e1e1e;
+    color: #ececec;
+    font-size: 0.85em;
+  }
+  select#model {
+    width: 100%;
+    min-height: 64px;
+    padding: 18px 16px;
+    border-radius: 8px;
+    border: 1px solid #3c4043;
+    background: #1e1e1e;
+    color: #ececec;
+    font-size: 0.95em;
+    line-height: 1.35;
+    cursor: pointer;
+  }
+  input:focus {
+    outline: 2px solid #8ab4f8;
+    outline-offset: 2px;
+  }
+  select#model:focus {
+    outline: 2px solid #8ab4f8;
+    outline-offset: 2px;
+  }
+  .model-help {
+    font-size: 0.62em;
+    color: #8d9298;
+    margin: 8px 0 0;
+    line-height: 1.45;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 14px 22px;
+    font-size: 0.85em;
+    font-weight: 600;
+    min-height: 48px;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-primary { background: #8ab4f8; color: #121212; }
+  .btn-danger { background: #f28b82; color: #121212; }
+  .btn-neutral { background: #3c4043; color: #ececec; }
+  .status {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    border: 1px solid #3c4043;
+    font-size: 0.8em;
+    min-height: 1.5em;
+    word-break: break-word;
+  }
+  .out {
+    margin-top: 20px;
+    padding: 18px 20px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    border: 1px solid #3c4043;
+    font-size: 0.9em;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 80px;
+  }
+  .hint { font-size: 0.65em; color: #9aa0a6; margin-top: 24px; line-height: 1.5; }
+</style>
+<script type="text/javascript">
+(function() {
+  var LOG_URL = 'http://127.0.0.1:9999/log';
+  ['log', 'warn', 'error', 'info'].forEach(function(level) {
+    var orig = console[level].bind(console);
+    console[level] = function() {
+      orig.apply(console, arguments);
+      var args = Array.prototype.slice.call(arguments).map(function(a) {
+        return typeof a === 'object' ? JSON.stringify(a) : String(a);
+      });
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', LOG_URL, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ level: level, args: args, ts: new Date().toISOString() }));
+    };
+  });
+})();
+/** Prefix for grep in debug.log when log relay is running (`npm run log`). */
+var LOG_P = '[stt-openrouter]';
+
+var OPENROUTER_STT = 'https://openrouter.ai/api/v1/audio/transcriptions';
+var LS_KEY = 'tgtv_openrouter_api_key';
+var LS_MODEL = 'tgtv_openrouter_stt_model';
+
+/** Default key for local testing only — rotate/remove before shipping. */
+var DEFAULT_OPENROUTER_API_KEY =
+  '';
+
+/** Default STT slug — gpt-4o-mini often returns empty text with TV WebM in practice; 4o transcribe matches batch API reliably (see debug logs). */
+var DEFAULT_STT_MODEL = 'openai/gpt-4o-transcribe';
+
+var mediaRecorder = null;
+var recordedChunks = [];
+var mediaStream = null;
+var chosenMime = '';
+/** Last successful recording for local replay only (not uploaded raw). */
+var lastRecordedBlob = null;
+var replayAudio = null;
+var replayVideo = null;
+var replayObjectUrl = null;
+/** Optional Web Audio route so TV/simulator actually reaches speakers. */
+var replayAudioCtx = null;
+
+function $(id) { return document.getElementById(id); }
+
+function audioFormatFromMime(mime) {
+  if (!mime) return 'webm';
+  if (mime.indexOf('webm') !== -1) return 'webm';
+  if (mime.indexOf('mp4') !== -1) return 'm4a';
+  if (mime.indexOf('mpeg') !== -1) return 'mp3';
+  if (mime.indexOf('ogg') !== -1) return 'ogg';
+  return 'webm';
+}
+
+function pickRecorderMime() {
+  if (typeof MediaRecorder === 'undefined') return '';
+  var candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus'
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+  }
+  return '';
+}
+
+function setStatus(msg) {
+  $('status').textContent = msg || '';
+}
+
+function setButtons(recording) {
+  $('btnRecord').disabled = recording;
+  $('btnStop').disabled = !recording;
+}
+
+function blobToBase64(blob, cb) {
+  var reader = new FileReader();
+  reader.onloadend = function() {
+    var dataUrl = reader.result;
+    var comma = dataUrl.indexOf(',');
+    cb(comma === -1 ? dataUrl : dataUrl.slice(comma + 1));
+  };
+  reader.onerror = function() {
+    cb('');
+  };
+  reader.readAsDataURL(blob);
+}
+
+function stopTracks() {
+  if (!mediaStream) return;
+  var tracks = mediaStream.getTracks();
+  for (var i = 0; i < tracks.length; i++) {
+    tracks[i].stop();
+  }
+  mediaStream = null;
+}
+
+function revokeReplayUrl() {
+  if (replayObjectUrl) {
+    try {
+      URL.revokeObjectURL(replayObjectUrl);
+    } catch (e) {}
+    replayObjectUrl = null;
+  }
+}
+
+function stopReplayPlayback() {
+  if (replayAudioCtx) {
+    try {
+      replayAudioCtx.close();
+    } catch (e) {}
+    replayAudioCtx = null;
+  }
+  if (replayAudio) {
+    try {
+      replayAudio.pause();
+      replayAudio.src = '';
+      replayAudio.onerror = null;
+      replayAudio.onended = null;
+      replayAudio.onplaying = null;
+    } catch (e) {}
+    replayAudio = null;
+  }
+  if (replayVideo) {
+    try {
+      replayVideo.pause();
+      replayVideo.removeAttribute('src');
+      replayVideo.onerror = null;
+      replayVideo.onended = null;
+      replayVideo.onplaying = null;
+      if (replayVideo.parentNode) {
+        replayVideo.parentNode.removeChild(replayVideo);
+      }
+    } catch (e) {}
+    replayVideo = null;
+  }
+  revokeReplayUrl();
+}
+
+function routeMediaElementToSpeakers(mediaEl) {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !mediaEl) {
+    return;
+  }
+  try {
+    replayAudioCtx = new AC();
+    var src = replayAudioCtx.createMediaElementSource(mediaEl);
+    src.connect(replayAudioCtx.destination);
+    if (replayAudioCtx.state === 'suspended') {
+      replayAudioCtx.resume().catch(function() {});
+    }
+    setTimeout(function() {
+      if (replayAudioCtx && replayAudioCtx.state === 'suspended') {
+        replayAudioCtx.resume().catch(function() {});
+      }
+    }, 50);
+    console.log(LOG_P, 'replay AudioContext route', replayAudioCtx.state);
+  } catch (e) {
+    console.warn(LOG_P, 'replay AudioContext route failed', String(e));
+    if (replayAudioCtx) {
+      try {
+        replayAudioCtx.close();
+      } catch (x) {}
+      replayAudioCtx = null;
+    }
+  }
+}
+
+function updateReplayButton() {
+  var btn = $('btnReplay');
+  if (btn) {
+    btn.disabled = !lastRecordedBlob || !lastRecordedBlob.size;
+  }
+}
+
+function playReplay() {
+  if (!lastRecordedBlob || !lastRecordedBlob.size) {
+    setStatus('Nothing recorded yet.');
+    return;
+  }
+  stopReplayPlayback();
+
+  replayObjectUrl = URL.createObjectURL(lastRecordedBlob);
+  console.log(LOG_P, 'replay start', JSON.stringify({ blobBytes: lastRecordedBlob.size }));
+
+  function finishReplay() {
+    console.log(LOG_P, 'replay ended');
+    stopReplayPlayback();
+    setStatus('Replay finished.');
+  }
+
+  function failReplay(msg) {
+    console.warn(LOG_P, 'replay unsupported', msg || '');
+    setStatus(msg || 'Replay not supported here (WebM decode). STT upload still used the same clip.');
+    stopReplayPlayback();
+  }
+
+  function tryReplayVideo() {
+    if (replayVideo) {
+      return;
+    }
+    console.log(LOG_P, 'replay fallback <video> (webm)');
+    if (replayAudioCtx) {
+      try {
+        replayAudioCtx.close();
+      } catch (e) {}
+      replayAudioCtx = null;
+    }
+    if (replayAudio) {
+      try {
+        replayAudio.pause();
+        replayAudio.src = '';
+      } catch (e) {}
+      replayAudio = null;
+    }
+    replayVideo = document.createElement('video');
+    replayVideo.setAttribute('playsinline', 'playsinline');
+    replayVideo.setAttribute('webkit-playsinline', 'true');
+    replayVideo.muted = false;
+    replayVideo.volume = 1;
+    replayVideo.defaultMuted = false;
+    replayVideo.removeAttribute('muted');
+    replayVideo.style.cssText =
+      'position:fixed;right:8px;bottom:8px;width:4px;height:4px;opacity:0.02;pointer-events:none;z-index:9999;';
+    replayVideo.src = replayObjectUrl;
+    replayVideo.onended = finishReplay;
+    replayVideo.onplaying = function() {
+      console.log(LOG_P, 'replay video playing', JSON.stringify({
+        muted: replayVideo.muted,
+        volume: replayVideo.volume
+      }));
+    };
+    replayVideo.onerror = function() {
+      console.warn(LOG_P, 'replay video element error');
+      failReplay('Replay unavailable (no WebM decoder). Try a real TV or newer simulator — STT still works.');
+    };
+    document.body.appendChild(replayVideo);
+    routeMediaElementToSpeakers(replayVideo);
+    var vp = replayVideo.play();
+    if (vp && typeof vp.then === 'function') {
+      vp.catch(function(err) {
+        console.warn(LOG_P, 'replay video play rejected', String(err));
+        failReplay('Replay playback blocked. STT already ran on this clip.');
+      });
+    }
+    setStatus('Playing last recording (video fallback)… If silent: TV/simulator volume.');
+  }
+
+  if (typeof Audio === 'undefined') {
+    tryReplayVideo();
+    return;
+  }
+
+  replayAudio = new Audio(replayObjectUrl);
+  replayAudio.muted = false;
+  replayAudio.volume = 1;
+  replayAudio.preload = 'auto';
+  replayAudio.onplaying = function() {
+    console.log(LOG_P, 'replay audio playing', JSON.stringify({
+      muted: replayAudio.muted,
+      volume: replayAudio.volume
+    }));
+  };
+  replayAudio.onended = finishReplay;
+  replayAudio.onerror = function() {
+    console.warn(LOG_P, 'replay audio element error');
+    tryReplayVideo();
+  };
+
+  routeMediaElementToSpeakers(replayAudio);
+
+  var p = replayAudio.play();
+  if (p && typeof p.then === 'function') {
+    p.catch(function(err) {
+      console.warn(LOG_P, 'replay audio play rejected', String(err));
+      tryReplayVideo();
+    });
+  }
+  setStatus('Playing last recording… If silent: raise TV volume (simulator may not send audio to Mac).');
+}
+
+function postTranscription(apiKey, model, format, base64Data, onDone) {
+  console.log(LOG_P, 'transcribe request', JSON.stringify({
+    model: model,
+    format: format,
+    audioBase64Chars: base64Data.length
+  }));
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', OPENROUTER_STT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+  xhr.setRequestHeader('HTTP-Referer', window.location.href || 'https://localhost');
+  xhr.setRequestHeader('X-Title', 'tgtv-stt-openrouter');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    var raw = xhr.responseText;
+    var data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.warn(LOG_P, 'transcribe response not JSON', raw.slice(0, 400));
+      onDone(false, 'Bad response (not JSON): ' + raw.slice(0, 200));
+      return;
+    }
+    if (xhr.status >= 200 && xhr.status < 300) {
+      var t = data.text || '';
+      console.log(LOG_P, 'transcribe ok', JSON.stringify({
+        httpStatus: xhr.status,
+        textLen: t.length,
+        textEmpty: !t.length,
+        usage: data.usage || null
+      }));
+      onDone(true, data);
+    } else {
+      console.warn(LOG_P, 'transcribe http error', JSON.stringify({
+        httpStatus: xhr.status,
+        bodyPreview: raw.slice(0, 400)
+      }));
+      var errMsg = raw;
+      if (data.error) {
+        if (typeof data.error === 'string') errMsg = data.error;
+        else if (data.error.message) errMsg = data.error.message;
+      }
+      onDone(false, errMsg);
+    }
+  };
+  xhr.send(JSON.stringify({
+    model: model,
+    input_audio: {
+      data: base64Data,
+      format: format
+    }
+  }));
+}
+
+function startRecording() {
+  var apiKey = $('apiKey').value.replace(/^\s+|\s+$/g, '') || DEFAULT_OPENROUTER_API_KEY;
+
+  stopReplayPlayback();
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.warn(LOG_P, 'getUserMedia unavailable');
+    setStatus('This environment has no getUserMedia (microphone unavailable).');
+    return;
+  }
+  if (typeof MediaRecorder === 'undefined') {
+    console.warn(LOG_P, 'MediaRecorder unsupported');
+    setStatus('MediaRecorder is not supported here.');
+    return;
+  }
+
+  chosenMime = pickRecorderMime();
+  console.log(LOG_P, 'record arm', JSON.stringify({ recorderMime: chosenMime }));
+  setStatus('Requesting microphone…');
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    mediaStream = stream;
+    recordedChunks = [];
+    var options = chosenMime ? { mimeType: chosenMime } : undefined;
+    try {
+      mediaRecorder = options
+        ? new MediaRecorder(stream, options)
+        : new MediaRecorder(stream);
+    } catch (e) {
+      stopTracks();
+      console.warn(LOG_P, 'MediaRecorder ctor failed', String(e && e.message ? e.message : e));
+      setStatus('MediaRecorder failed: ' + e.message);
+      return;
+    }
+
+    mediaRecorder.ondataavailable = function(ev) {
+      if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data);
+    };
+
+    mediaRecorder.onstop = function() {
+      stopTracks();
+      var mime = recordedChunks.length && recordedChunks[0].type
+        ? recordedChunks[0].type
+        : chosenMime;
+      var blob = new Blob(recordedChunks, { type: mime || 'audio/webm' });
+      recordedChunks = [];
+      if (!blob.size) {
+        console.warn(LOG_P, 'stop record empty blob');
+        setStatus('No audio captured.');
+        setButtons(false);
+        return;
+      }
+
+      lastRecordedBlob = blob;
+      updateReplayButton();
+
+      var fmt = audioFormatFromMime(blob.type);
+      console.log(LOG_P, 'stop record', JSON.stringify({
+        blobBytes: blob.size,
+        blobMime: blob.type || '',
+        formatField: fmt
+      }));
+      setStatus('Uploading to OpenRouter (' + fmt + ')…');
+      blobToBase64(blob, function(b64) {
+        if (!b64) {
+          console.warn(LOG_P, 'blobToBase64 failed');
+          setStatus('Could not read audio data.');
+          setButtons(false);
+          return;
+        }
+        var model = $('model').value.replace(/^\s+|\s+$/g, '') || DEFAULT_STT_MODEL;
+        postTranscription(apiKey, model, fmt, b64, function(ok, payload) {
+          setButtons(false);
+          if (ok) {
+            var text = payload.text || '';
+            $('output').textContent = text;
+            var u = payload.usage;
+            var extra = '';
+            if (u) {
+              extra = '\n\n—\nusage: ' + JSON.stringify(u);
+            }
+            setStatus('Done.' + (text ? '' : ' (empty transcript)') + extra);
+          } else {
+            $('output').textContent = '';
+            setStatus('Error: ' + payload);
+          }
+        });
+      });
+    };
+
+    mediaRecorder.start(200);
+    setButtons(true);
+    setStatus('Recording… press Stop when finished.');
+  }).catch(function(err) {
+    console.warn(LOG_P, 'getUserMedia error', String(err && err.message ? err.message : err));
+    setStatus('Microphone error: ' + (err && err.message ? err.message : String(err)));
+  });
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    setStatus('Stopping…');
+    mediaRecorder.stop();
+  } else {
+    setButtons(false);
+    stopTracks();
+    setStatus('Idle.');
+  }
+}
+
+function saveSettings() {
+  var key = $('apiKey').value.replace(/^\s+|\s+$/g, '');
+  var model = $('model').value.replace(/^\s+|\s+$/g, '');
+  try {
+    if (key) localStorage.setItem(LS_KEY, key);
+    if (model) localStorage.setItem(LS_MODEL, model);
+  } catch (e) {
+    console.warn('localStorage:', e);
+  }
+  setStatus('Saved locally on this TV.');
+}
+
+function loadSettings() {
+  try {
+    var k = localStorage.getItem(LS_KEY);
+    if (k) $('apiKey').value = k;
+  } catch (e) {
+    console.warn('localStorage:', e);
+  }
+}
+
+function applyModelSelection() {
+  var sel = $('model');
+  var m = '';
+  try {
+    m = localStorage.getItem(LS_MODEL) || '';
+  } catch (e) {
+    console.warn('localStorage:', e);
+  }
+  if (m) {
+    var found = false;
+    var i;
+    for (i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === m) {
+        found = true;
+        break;
+      }
+    }
+    if (found) {
+      sel.value = m;
+    } else {
+      var opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = 'Saved custom · ' + m;
+      sel.appendChild(opt);
+      sel.value = m;
+    }
+  } else {
+    sel.value = DEFAULT_STT_MODEL;
+  }
+}
+
+window.onload = function() {
+  loadSettings();
+  applyModelSelection();
+  if (!$('apiKey').value.replace(/^\s+|\s+$/g, '')) {
+    $('apiKey').value = DEFAULT_OPENROUTER_API_KEY;
+  }
+  setButtons(false);
+  setStatus('Idle. Save your API key, then record a short phrase.');
+
+  $('btnSave').onclick = saveSettings;
+  $('btnRecord').onclick = startRecording;
+  $('btnStop').onclick = stopRecording;
+  $('btnReplay').onclick = playReplay;
+  updateReplayButton();
+
+  var hidden;
+  var visibilityChange;
+  if (typeof document.hidden !== 'undefined') {
+    hidden = 'hidden';
+    visibilityChange = 'visibilitychange';
+  } else if (typeof document.webkitHidden !== 'undefined') {
+    hidden = 'webkitHidden';
+    visibilityChange = 'webkitvisibilitychange';
+  }
+  if (visibilityChange) {
+    document.addEventListener(visibilityChange, function() {
+      if (document[hidden] && mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+      }
+      if (document[hidden]) {
+        stopReplayPlayback();
+      }
+    }, true);
+  }
+};
+</script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Speech-to-text (OpenRouter)</h1>
+    <p class="sub">
+      Records from the TV microphone and transcribes via
+      <code style="font-size:0.9em;color:#8ab4f8;">openrouter.ai/api/v1/audio/transcriptions</code>.
+      Model list shows <strong>approximate cost per minute</strong> (Whisper = exact ×60; GPT‑4o transcribe = illustrative token estimate — see note).
+      Multimodal chat models filtered by audio on the
+      <a href="https://openrouter.ai/models?input_modalities=audio" style="color:#8ab4f8;">models</a>
+      page use chat completions, not this STT endpoint.
+      Use a short clip to stay under provider timeouts.
+      <strong>No streaming:</strong> this API returns <strong>one full transcript</strong> after you stop recording — partial/live captions need a realtime STT product (WebSocket), not OpenRouter batch transcribe.
+    </p>
+
+    <label for="apiKey">OpenRouter API key</label>
+    <input type="password" id="apiKey" autocomplete="off" placeholder="sk-or-…">
+
+    <label for="model">STT model (approx. cost per minute)</label>
+    <select id="model">
+      <optgroup label="Cheapest — token-priced (~est. $/min, see note)">
+        <option value="openai/gpt-4o-mini-transcribe">GPT-4o Mini Transcribe — ~$0.005 / min (est.)</option>
+      </optgroup>
+      <optgroup label="Balanced — token-priced (~est. $/min)">
+        <option value="openai/gpt-4o-transcribe" selected>GPT-4o Transcribe — ~$0.01 / min (est.)</option>
+      </optgroup>
+      <optgroup label="Classic — duration-priced (list rate × 60 s)">
+        <option value="openai/whisper-1">Whisper — ~$0.36 / min</option>
+      </optgroup>
+      <optgroup label="Large — duration-priced">
+        <option value="openai/whisper-large-v3-turbo">Whisper Large V3 Turbo — ~$2.40 / min</option>
+      </optgroup>
+      <optgroup label="Best quality — duration-priced">
+        <option value="openai/whisper-large-v3">Whisper Large V3 — ~$6.66 / min</option>
+      </optgroup>
+    </select>
+    <p id="modelHelp" class="model-help">
+      <strong>Whisper</strong> lines use OpenRouter list $/s × 60 → $/min ($0.006, $0.04, $0.111 per second).
+      <strong>GPT‑4o transcribe</strong> lines are token-priced; ~$/min uses an illustrative mix (~3000 prompt + ~200 completion tokens per minute of speech). Real spend is in <code>usage.cost</code> after each request.
+      <strong>GPT‑4o Mini Transcribe</strong> may return empty <code>text</code> for some WebM captures while still billing — if that happens, switch to <strong>GPT‑4o Transcribe</strong> or a Whisper model.
+    </p>
+
+    <div class="row">
+      <button type="button" class="btn-neutral" id="btnSave">Save key &amp; model</button>
+    </div>
+
+    <label style="margin-top:24px;">Recording</label>
+    <div class="row">
+      <button type="button" class="btn-primary" id="btnRecord">Record</button>
+      <button type="button" class="btn-danger" id="btnStop" disabled>Stop &amp; transcribe</button>
+      <button type="button" class="btn-neutral" id="btnReplay" disabled>Replay last clip</button>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="out" id="output"></div>
+
+    <p class="hint">
+      Key and model can be stored in <code>localStorage</code> on this device (Save).
+      A default API key is embedded for testing — replace or remove before distribution.
+      Many TVs need a USB mic or built-in mic support; the simulator may not provide audio input.
+      With <code>npm run log</code>, each STT step emits <code>[stt-openrouter]</code> lines to <code>debug.log</code> (request meta, blob size, HTTP status, usage — never the API key or raw audio).
+      <strong>Replay</strong> uses <code>&lt;audio&gt;</code>, then <code>&lt;video&gt;</code>, then a Web Audio route to the TV speakers. Unmute TV/system volume. The webOS TV 6 <strong>simulator often sends no sound to your Mac</strong> even when decode succeeds — test on real hardware or webOS 22+ simulator to hear playback.
+    </p>
+  </div>
+</body>
+</html>
