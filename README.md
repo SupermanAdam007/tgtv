@@ -13,7 +13,7 @@ npm install
 
 | App | Type | Description |
 |-----|------|-------------|
-| `app1/` | Packaged | Hello World — dev environment baseline |
+| `apps/app1/` | Packaged | Hello World — dev environment baseline |
 
 ## Dev workflow
 
@@ -33,7 +33,7 @@ npm run log         # start server on localhost:9999
 
 ```bash
 npx ares-novacom --device myTV --getkey
-npx ares-package ./app1
+npx ares-package ./apps/app1
 npx ares-install --device myTV ./com.tgtv.app1_0.0.1_all.ipk
 npx ares-launch --device myTV com.tgtv.app1
 ```
