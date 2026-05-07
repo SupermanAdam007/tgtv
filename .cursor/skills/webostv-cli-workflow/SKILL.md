@@ -236,6 +236,15 @@ ares-server ./myApp --open    # opens browser
 
 ### Full deploy cycle (package → install → launch)
 
+Use the project deploy script — it reads `appinfo.json` for the ID and version automatically:
+
+```bash
+npm run deploy -- ./apps/myApp
+npm run deploy -- ./apps/myApp --inspect   # deploy + attach Web Inspector
+```
+
+Or manually:
+
 ```bash
 ares-package ./apps/myApp && \
 ares-install --device myTV ./com.domain.app_0.0.1_all.ipk && \
