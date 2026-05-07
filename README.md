@@ -15,6 +15,7 @@ nvm use && npm install
 | `apps/app1` | `com.tgtv.app1` | Hello World baseline |
 | `apps/stt-openrouter` | `com.tgtv.sttopenrouter` | Speech-to-text via OpenRouter API |
 | `apps/voice-fx` | `com.tgtv.voicefx` | Real-time voice distortion (8 effects) |
+| `apps/netscout` | `com.tgtv.netscout` | Internet speed test + LAN device discovery |
 
 ## Scripts
 

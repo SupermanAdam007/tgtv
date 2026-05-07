@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Net Scout</title>
+<style type="text/css">
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  background: #0d0d0d;
+  color: #ececec;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Layout ── */
+.app { width: 1920px; height: 1080px; display: flex; flex-direction: column; }
+
+/* ── Header ── */
+.header {
+  height: 90px;
+  display: flex; align-items: center;
+  padding: 0 60px;
+  border-bottom: 1px solid #1e1e1e;
+  flex-shrink: 0;
+}
+.header-title {
+  font-size: 36px; font-weight: 700;
+  color: #4ab3f5; margin-right: 60px;
+  letter-spacing: 0.04em;
+}
+.tabs { display: flex; gap: 8px; }
+.tab {
+  padding: 12px 36px;
+  font-size: 28px; font-weight: 600;
+  border-radius: 8px; cursor: pointer;
+  color: #888; background: transparent;
+  border: 2px solid transparent; outline: none;
+}
+.tab.active { color: #ececec; background: #1a1a1a; border-color: #4ab3f5; }
+.tab.focused { border-color: #fff; color: #fff; }
+
+/* ── Content ── */
+.content { flex: 1; overflow: hidden; position: relative; }
+.panel {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  padding: 40px 60px;
+  display: none;
+}
+.panel.visible { display: flex; flex-direction: column; }
+
+/* ── Status bar ── */
+.statusbar {
+  height: 56px; display: flex; align-items: center;
+  padding: 0 60px; border-top: 1px solid #1a1a1a;
+  font-size: 24px; color: #555; flex-shrink: 0;
+}
+.statusbar .hint { margin-right: 40px; }
+.statusbar .hint span { color: #4ab3f5; }
+
+/* ─────────────────────────────────────────
+   PANEL 0 — SPEED TEST
+   ───────────────────────────────────────── */
+.speed-layout { display: flex; gap: 40px; height: 100%; }
+
+.gauge-col {
+  width: 460px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.gauge-wrap { position: relative; width: 380px; height: 380px; }
+.gauge-wrap canvas { display: block; }
+.gauge-center {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none;
+}
+.gauge-value { font-size: 72px; font-weight: 700; line-height: 1; color: #4ab3f5; }
+.gauge-unit  { font-size: 26px; color: #888; margin-top: 4px; }
+.gauge-label { font-size: 28px; color: #aaa; }
+.gauge-quality {
+  font-size: 24px; font-weight: 600;
+  padding: 6px 20px; border-radius: 20px;
+  display: inline-block; min-height: 38px;
+}
+
+.results-col {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; gap: 24px;
+}
+.metric-row {
+  display: flex; align-items: center;
+  background: #111; border-radius: 14px;
+  padding: 24px 32px; border: 2px solid #1e1e1e; gap: 24px;
+}
+.metric-icon { width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.metric-icon svg { width: 44px; height: 44px; }
+.metric-body { flex: 1; }
+.metric-label { font-size: 24px; color: #666; margin-bottom: 4px; }
+.metric-val   { font-size: 52px; font-weight: 700; line-height: 1; }
+.metric-val .unit { font-size: 26px; font-weight: 400; color: #888; }
+.metric-sub   { font-size: 21px; color: #555; margin-top: 4px; }
+.metric-bar-wrap { width: 100%; height: 8px; background: #1e1e1e; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+.metric-bar   { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.metric-quality { font-size: 20px; font-weight: 600; margin-top: 6px; }
+
+.start-btn {
+  padding: 18px 72px; font-size: 32px; font-weight: 700;
+  background: #4ab3f5; color: #0d0d0d;
+  border: 3px solid #4ab3f5; border-radius: 12px;
+  cursor: pointer; outline: none; letter-spacing: 0.03em;
+}
+.start-btn.focused  { border-color: #fff; background: #fff; color: #0d0d0d; }
+.start-btn:disabled { opacity: 0.5; cursor: default; }
+.start-btn.running  { background: #1e1e1e; color: #aaa; border-color: #444; }
+
+.phase-label { font-size: 24px; color: #4ab3f5; text-align: center; min-height: 30px; }
+
+/* ─────────────────────────────────────────
+   PANEL 1 — NETWORK INFO
+   ───────────────────────────────────────── */
+.info-grid { display: flex; flex-wrap: wrap; gap: 20px; align-content: flex-start; }
+.info-card {
+  background: #111; border-radius: 14px;
+  border: 2px solid #1e1e1e; padding: 24px 28px;
+  min-width: 300px; flex: 1;
+}
+.info-card.wide { flex-basis: 100%; max-width: 660px; }
+.info-card-label {
+  font-size: 21px; color: #555;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.info-card-value           { font-size: 36px; font-weight: 700; color: #ececec; word-break: break-all; }
+.info-card-value.mono      { font-family: "Courier New", Courier, monospace; font-size: 30px; }
+.info-card-value.small     { font-size: 26px; }
+
+.signal-bars { display: inline-flex; align-items: flex-end; gap: 5px; height: 36px; margin-top: 8px; }
+.signal-bar  { width: 14px; border-radius: 3px 3px 0 0; background: #222; }
+.signal-bar.lit { background: #4ab3f5; }
+
+.info-refresh-btn {
+  align-self: flex-start; margin-top: 16px;
+  padding: 14px 48px; font-size: 28px; font-weight: 600;
+  background: #1a1a1a; color: #ececec;
+  border: 2px solid #333; border-radius: 10px;
+  cursor: pointer; outline: none;
+}
+.info-refresh-btn.focused { border-color: #fff; color: #fff; }
+
+/* ─────────────────────────────────────────
+   PANEL 2 — LAN SCAN
+   ───────────────────────────────────────── */
+.scan-header {
+  display: flex; align-items: center; gap: 28px;
+  margin-bottom: 24px; flex-shrink: 0;
+}
+.scan-btn {
+  padding: 14px 48px; font-size: 28px; font-weight: 700;
+  background: #4ab3f5; color: #0d0d0d;
+  border: 3px solid #4ab3f5; border-radius: 10px;
+  cursor: pointer; outline: none; white-space: nowrap;
+}
+.scan-btn.focused  { border-color: #fff; background: #fff; }
+.scan-btn:disabled { opacity: 0.5; cursor: default; }
+
+.scan-progress-wrap { flex: 1; height: 12px; background: #1e1e1e; border-radius: 6px; overflow: hidden; }
+.scan-progress-bar  { height: 100%; background: #4ab3f5; border-radius: 6px; transition: width 0.1s; }
+.scan-status-text   { font-size: 24px; color: #888; white-space: nowrap; min-width: 260px; text-align: right; }
+
+.device-list {
+  flex: 1; overflow: hidden;
+  display: flex; flex-wrap: wrap;
+  align-content: flex-start; gap: 18px;
+}
+.device-card {
+  background: #111; border-radius: 14px;
+  border: 2px solid #1e1e1e;
+  padding: 20px 24px;
+  width: 340px; flex-shrink: 0;
+}
+.device-card.gateway { border-color: #4ab3f5; }
+.device-card.self    { border-color: #f5a623; }
+
+.device-ip {
+  font-size: 30px; font-weight: 700;
+  font-family: "Courier New", Courier, monospace;
+  color: #ececec; line-height: 1.2;
+}
+.device-role {
+  font-size: 20px; margin-top: 5px; font-weight: 600;
+}
+.device-role.gateway-role { color: #4ab3f5; }
+.device-role.self-role    { color: #f5a623; }
+.device-role.default-role { color: #666; }
+
+.device-tags { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.device-tag  {
+  background: #1a1a1a; border-radius: 6px;
+  padding: 3px 12px; font-size: 19px; color: #888;
+}
+.device-tag.open { color: #4ab3f5; background: #0e1c2a; }
+
+.no-devices { font-size: 30px; color: #444; align-self: center; margin: auto; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">&#x2316; Net Scout</div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" id="tab-0">Speed Test</div>
+      <div class="tab"        id="tab-1">Network Info</div>
+      <div class="tab"        id="tab-2">LAN Scan</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ── Panel 0: Speed Test ── -->
+    <div class="panel visible" id="panel-0">
+      <div class="speed-layout">
+
+        <div class="gauge-col">
+          <div class="gauge-wrap">
+            <canvas id="gauge-canvas" width="380" height="380"></canvas>
+            <div class="gauge-center">
+              <div class="gauge-value" id="gauge-val">—</div>
+              <div class="gauge-unit"  id="gauge-unit">Mbps</div>
+            </div>
+          </div>
+          <div class="gauge-label"   id="gauge-label">Ready</div>
+          <div class="gauge-quality" id="gauge-quality"></div>
+          <div class="phase-label"   id="phase-label"></div>
+          <button class="start-btn focused" id="start-btn" onclick="startSpeedTest()">Start Test</button>
+        </div>
+
+        <div class="results-col">
+
+          <!-- Latency -->
+          <div class="metric-row">
+            <div class="metric-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#4ab3f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="metric-body">
+              <div class="metric-label">Latency</div>
+              <div class="metric-val"><span id="lat-val">—</span> <span class="unit">ms</span></div>
+              <div class="metric-sub" id="lat-sub">Jitter: —</div>
+              <div class="metric-quality" id="lat-quality"></div>
+              <div class="metric-bar-wrap"><div class="metric-bar" id="lat-bar" style="width:0%;background:#4ab3f5"></div></div>
+            </div>
+          </div>
+
+          <!-- Download -->
+          <div class="metric-row">
+            <div class="metric-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line>
+                <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
+              </svg>
+            </div>
+            <div class="metric-body">
+              <div class="metric-label">Download</div>
+              <div class="metric-val"><span id="dl-val">—</span> <span class="unit">Mbps</span></div>
+              <div class="metric-sub" id="dl-sub">—</div>
+              <div class="metric-quality" id="dl-quality"></div>
+              <div class="metric-bar-wrap"><div class="metric-bar" id="dl-bar" style="width:0%;background:#22c55e"></div></div>
+            </div>
+          </div>
+
+          <!-- Upload -->
+          <div class="metric-row">
+            <div class="metric-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line>
+                <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
+              </svg>
+            </div>
+            <div class="metric-body">
+              <div class="metric-label">Upload</div>
+              <div class="metric-val"><span id="ul-val">—</span> <span class="unit">Mbps</span></div>
+              <div class="metric-sub" id="ul-sub">—</div>
+              <div class="metric-quality" id="ul-quality"></div>
+              <div class="metric-bar-wrap"><div class="metric-bar" id="ul-bar" style="width:0%;background:#f59e0b"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /panel-0 -->
+
+    <!-- ── Panel 1: Network Info ── -->
+    <div class="panel" id="panel-1">
+      <div class="info-grid" id="info-grid">
+        <div class="info-card">
+          <div class="info-card-label">Connection</div>
+          <div class="info-card-value" id="ic-type-val">Loading…</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">IP Address</div>
+          <div class="info-card-value mono" id="ic-ip-val">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Subnet Mask</div>
+          <div class="info-card-value mono small" id="ic-mask-val">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Gateway</div>
+          <div class="info-card-value mono" id="ic-gw-val">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">MAC Address</div>
+          <div class="info-card-value mono small" id="ic-mac-val">—</div>
+        </div>
+        <div class="info-card wide">
+          <div class="info-card-label">DNS Servers</div>
+          <div class="info-card-value mono small" id="ic-dns-val">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Wi-Fi SSID</div>
+          <div class="info-card-value small" id="ic-ssid-val">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Signal Strength</div>
+          <div class="info-card-value" id="ic-signal-val">—</div>
+          <div class="signal-bars" id="ic-signal-bars"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Wi-Fi Channel</div>
+          <div class="info-card-value" id="ic-chan-val">—</div>
+        </div>
+        <div class="info-card wide">
+          <div class="info-card-label">TV Model</div>
+          <div class="info-card-value small" id="ic-model-val">—</div>
+        </div>
+      </div>
+      <button class="info-refresh-btn focused" id="info-refresh-btn" onclick="loadNetworkInfo()">Refresh</button>
+    </div><!-- /panel-1 -->
+
+    <!-- ── Panel 2: LAN Scan ── -->
+    <div class="panel" id="panel-2">
+      <div class="scan-header">
+        <button class="scan-btn focused" id="scan-btn" onclick="startScan()">Scan LAN</button>
+        <div class="scan-progress-wrap">
+          <div class="scan-progress-bar" id="scan-bar" style="width:0%"></div>
+        </div>
+        <div class="scan-status-text" id="scan-status">Idle</div>
+      </div>
+      <div class="device-list" id="device-list">
+        <div class="no-devices" id="no-devices-msg">Press <strong>Scan LAN</strong> to discover<br>devices on your network.</div>
+      </div>
+    </div><!-- /panel-2 -->
+
+  </div><!-- /content -->
+
+  <div class="statusbar">
+    <div class="hint"><span>&#x25C4; &#x25BA;</span> Switch tabs</div>
+    <div class="hint"><span>&#x25B2; &#x25BC;</span> Navigate</div>
+    <div class="hint"><span>OK</span> Select</div>
+    <div style="margin-left:auto;color:#333" id="conn-indicator">&#x25CF;</div>
+  </div>
+
+</div>
+
+<script type="text/javascript">
+// ─── Log relay ───────────────────────────────────────────────────────────────
+(function() {
+  var LOG_URL = 'http://127.0.0.1:9999/log';
+
+  function relay(level, args) {
+    var mapped = Array.prototype.slice.call(args).map(function(a) {
+      return typeof a === 'object' ? JSON.stringify(a) : String(a);
+    });
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', LOG_URL, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({level: level, args: mapped, ts: new Date().toISOString()}));
+  }
+
+  // Intercept all console levels including debug
+  ['log', 'info', 'warn', 'error', 'debug'].forEach(function(level) {
+    var orig = (console[level] || console.log).bind(console);
+    console[level] = function() {
+      orig.apply(console, arguments);
+      relay(level, arguments);
+    };
+  });
+
+  // Uncaught JS exceptions
+  window.onerror = function(msg, src, line, col, err) {
+    relay('error', [
+      'Uncaught: ' + msg +
+      ' (' + (src || '?') + ':' + line + ':' + col + ')' +
+      (err && err.stack ? '\n' + err.stack : '')
+    ]);
+    return false; // let browser also log it
+  };
+
+  // Unhandled promise rejections (Chrome 49+, not available on webOS 3.x but fine to add)
+  if (window.addEventListener) {
+    window.addEventListener('unhandledrejection', function(e) {
+      relay('error', ['UnhandledRejection: ' + (e.reason ? String(e.reason) : 'unknown')]);
+    });
+  }
+})();
+
+// ─── Luna helper ─────────────────────────────────────────────────────────────
+function lunaCall(service, method, params, onSuccess, onFailure) {
+  if (typeof window.PalmServiceBridge === 'undefined') {
+    console.warn('PalmServiceBridge not available');
+    if (onFailure) onFailure({errorText: 'PalmServiceBridge unavailable'});
+    return null;
+  }
+  var bridge = new window.PalmServiceBridge();
+  bridge.onservicecallback = function(msg) {
+    var res;
+    try { res = JSON.parse(msg); } catch(e) { res = {}; }
+    if (res.returnValue === false) {
+      console.warn('Luna error', service + '/' + method, JSON.stringify(res));
+      if (onFailure) onFailure(res);
+    } else {
+      if (onSuccess) onSuccess(res);
+    }
+  };
+  bridge.call('luna://' + service + '/' + method, JSON.stringify(params || {}));
+  return bridge;
+}
+
+// ─── Quality helpers ─────────────────────────────────────────────────────────
+function latencyQuality(ms) {
+  if (ms < 20)  return {label: 'Excellent', color: '#22c55e'};
+  if (ms < 60)  return {label: 'Good',      color: '#4ab3f5'};
+  if (ms < 150) return {label: 'Fair',      color: '#f59e0b'};
+  return           {label: 'Poor',      color: '#ef4444'};
+}
+function speedQuality(mbps) {
+  if (mbps >= 100) return {label: 'Excellent', color: '#22c55e'};
+  if (mbps >= 25)  return {label: 'Good',      color: '#4ab3f5'};
+  if (mbps >= 5)   return {label: 'Fair',      color: '#f59e0b'};
+  return            {label: 'Poor',      color: '#ef4444'};
+}
+// Scale the gauge max to the next nice value above val
+function niceMax(val) {
+  if (val <= 10)  return 10;
+  if (val <= 25)  return 25;
+  if (val <= 50)  return 50;
+  if (val <= 100) return 100;
+  if (val <= 250) return 250;
+  if (val <= 500) return 500;
+  return 1000;
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+var state = {
+  activeTab:    0,
+  focusedEl:    null,
+  speedRunning: false,
+  scanRunning:  false,
+  scanAborted:  false,
+  tvLocalIp:    null,
+  tvGateway:    null,
+  lastDlMbps:   0
+};
+
+// ─── Tab navigation ──────────────────────────────────────────────────────────
+function switchTab(idx) {
+  var TAB_COUNT = 3;
+  for (var i = 0; i < TAB_COUNT; i++) {
+    document.getElementById('tab-' + i).className = 'tab' + (i === idx ? ' active' : '');
+    document.getElementById('panel-' + i).className = 'panel' + (i === idx ? ' visible' : '');
+  }
+  state.activeTab = idx;
+  if (idx === 0) setFocus(document.getElementById('start-btn'));
+  if (idx === 1) setFocus(document.getElementById('info-refresh-btn'));
+  if (idx === 2) setFocus(document.getElementById('scan-btn'));
+}
+
+function setFocus(el) {
+  if (state.focusedEl && state.focusedEl !== el) state.focusedEl.classList.remove('focused');
+  if (el) { el.classList.add('focused'); state.focusedEl = el; }
+}
+
+document.addEventListener('keydown', function(e) {
+  var key = e.keyCode;
+  if (key === 37) { if (state.activeTab > 0) switchTab(state.activeTab - 1); e.preventDefault(); return; }
+  if (key === 39) { if (state.activeTab < 2) switchTab(state.activeTab + 1); e.preventDefault(); return; }
+  if (key === 13 || key === 32) { if (state.focusedEl) state.focusedEl.click(); e.preventDefault(); return; }
+  if (key === 461 || key === 8) { e.preventDefault(); }
+}, true);
+
+// ─── Gauge ───────────────────────────────────────────────────────────────────
+var gaugeCanvas  = document.getElementById('gauge-canvas');
+var gCtx         = gaugeCanvas.getContext('2d');
+var gCurrent     = 0;
+var gTarget      = 0;
+var gMax         = 100;
+var gColor       = '#4ab3f5';
+var gAnimId      = null;
+
+function drawGauge(value) {
+  var w = 380, h = 380, cx = 190, cy = 200, r = 160;
+  var startA = Math.PI * 0.75, endA = Math.PI * 2.25, range = endA - startA;
+  gCtx.clearRect(0, 0, w, h);
+  // Track
+  gCtx.beginPath(); gCtx.arc(cx, cy, r, startA, endA);
+  gCtx.strokeStyle = '#1e1e1e'; gCtx.lineWidth = 20; gCtx.lineCap = 'round'; gCtx.stroke();
+  // Fill
+  var frac = Math.max(0, Math.min(value / gMax, 1));
+  if (frac > 0.005) {
+    gCtx.beginPath(); gCtx.arc(cx, cy, r, startA, startA + range * frac);
+    gCtx.strokeStyle = gColor; gCtx.lineWidth = 20; gCtx.lineCap = 'round'; gCtx.stroke();
+  }
+  // Ticks
+  for (var i = 0; i <= 10; i++) {
+    var a = startA + range * (i / 10);
+    gCtx.beginPath();
+    gCtx.moveTo(cx + Math.cos(a) * (r - 28), cy + Math.sin(a) * (r - 28));
+    gCtx.lineTo(cx + Math.cos(a) * (r - 14), cy + Math.sin(a) * (r - 14));
+    gCtx.strokeStyle = '#2a2a2a'; gCtx.lineWidth = 2; gCtx.stroke();
+  }
+}
+
+function animateGauge() {
+  var diff = gTarget - gCurrent;
+  gCurrent = Math.abs(diff) < 0.5 ? gTarget : gCurrent + diff * 0.14;
+  drawGauge(gCurrent);
+  var displayVal = gCurrent < 0.5 ? '—' : (gCurrent < 10 ? gCurrent.toFixed(1) : Math.round(gCurrent).toString());
+  document.getElementById('gauge-val').textContent = displayVal;
+  if (gCurrent !== gTarget) gAnimId = setTimeout(animateGauge, 16);
+}
+
+function setGauge(val, color, maxVal) {
+  if (color)  gColor = color;
+  if (maxVal) gMax   = maxVal;
+  gTarget = val;
+  if (gAnimId) clearTimeout(gAnimId);
+  animateGauge();
+}
+
+function setGaugeQuality(q) {
+  var el = document.getElementById('gauge-quality');
+  if (q) {
+    el.textContent = q.label;
+    el.style.color = q.color;
+    el.style.background = q.color + '22';
+  } else {
+    el.textContent = '';
+    el.style.background = 'transparent';
+  }
+}
+
+drawGauge(0);
+
+// ─── Speed Test ──────────────────────────────────────────────────────────────
+var PING_URL = 'https://speed.cloudflare.com/__down?bytes=1';
+var DL_WARM  = 'https://speed.cloudflare.com/__down?bytes=5000000';
+var DL_MAIN  = 'https://speed.cloudflare.com/__down?bytes=25000000';
+var UL_URL   = 'https://speed.cloudflare.com/__up';
+
+function startSpeedTest() {
+  if (state.speedRunning) return;
+  state.speedRunning = true;
+  state.lastDlMbps   = 0;
+
+  var btn = document.getElementById('start-btn');
+  btn.disabled = true; btn.textContent = 'Testing…'; btn.className = 'start-btn running';
+
+  // Reset metrics
+  ['lat','dl','ul'].forEach(function(k) {
+    document.getElementById(k + '-val').textContent = '—';
+    document.getElementById(k + '-sub').textContent = '—';
+    document.getElementById(k + '-bar').style.width = '0%';
+    document.getElementById(k + '-quality').textContent = '';
+  });
+  document.getElementById('lat-sub').textContent = 'Jitter: —';
+  setGauge(0, '#4ab3f5', 300);
+  document.getElementById('gauge-val').textContent = '—';
+  document.getElementById('gauge-label').textContent = 'Testing…';
+  setGaugeQuality(null);
+
+  runLatencyTest(function(latMs, jitterMs) {
+    var q = latencyQuality(latMs);
+    document.getElementById('lat-val').textContent = Math.round(latMs).toString();
+    document.getElementById('lat-sub').textContent = 'Jitter: ' + Math.round(jitterMs) + ' ms';
+    document.getElementById('lat-quality').textContent = q.label;
+    document.getElementById('lat-quality').style.color  = q.color;
+    document.getElementById('lat-bar').style.width = Math.max(0, Math.min(100, (1 - latMs / 300) * 100)) + '%';
+
+    setGauge(latMs, '#4ab3f5', 300);
+    document.getElementById('gauge-unit').textContent  = 'ms';
+    document.getElementById('gauge-label').textContent = 'Latency';
+    setGaugeQuality(q);
+    document.getElementById('phase-label').textContent = 'Measuring download…';
+
+    runDownloadTest(function(dlMbps) {
+      state.lastDlMbps = dlMbps;
+      var qDl = speedQuality(dlMbps);
+      document.getElementById('dl-val').textContent = dlMbps.toFixed(1);
+      document.getElementById('dl-sub').textContent = 'Via Cloudflare CDN';
+      document.getElementById('dl-quality').textContent = qDl.label;
+      document.getElementById('dl-quality').style.color  = qDl.color;
+      document.getElementById('dl-bar').style.width = Math.min(100, dlMbps) + '%';
+      setGauge(dlMbps, '#22c55e', niceMax(dlMbps * 1.5));
+      document.getElementById('gauge-unit').textContent  = 'Mbps';
+      document.getElementById('gauge-label').textContent = 'Download';
+      setGaugeQuality(qDl);
+      document.getElementById('phase-label').textContent = 'Measuring upload…';
+
+      runUploadTest(function(ulMbps) {
+        var qUl = speedQuality(ulMbps);
+        document.getElementById('ul-val').textContent = ulMbps.toFixed(1);
+        document.getElementById('ul-sub').textContent = 'Via Cloudflare CDN';
+        document.getElementById('ul-quality').textContent = qUl.label;
+        document.getElementById('ul-quality').style.color  = qUl.color;
+        document.getElementById('ul-bar').style.width = Math.min(100, ulMbps) + '%';
+
+        // Gauge rests on download (most relevant headline metric)
+        var qFinal = speedQuality(state.lastDlMbps);
+        setGauge(state.lastDlMbps, '#22c55e', niceMax(state.lastDlMbps * 1.5));
+        document.getElementById('gauge-unit').textContent  = 'Mbps';
+        document.getElementById('gauge-label').textContent = 'Download';
+        setGaugeQuality(qFinal);
+        document.getElementById('phase-label').textContent = '';
+
+        finishSpeedTest();
+      });
+    }, function(liveMbps) {
+      // Live progress during download
+      var liveMax = niceMax(Math.max(liveMbps * 1.5, 10));
+      setGauge(liveMbps, '#22c55e', liveMax);
+      document.getElementById('gauge-unit').textContent  = 'Mbps';
+      document.getElementById('gauge-label').textContent = 'Download';
+      document.getElementById('dl-val').textContent = liveMbps.toFixed(1);
+    });
+  });
+}
+
+function runLatencyTest(callback) {
+  document.getElementById('phase-label').textContent = 'Measuring latency…';
+  setGauge(0, '#4ab3f5', 300);
+  document.getElementById('gauge-unit').textContent = 'ms';
+  document.getElementById('gauge-label').textContent = 'Latency';
+
+  var samples = [], done = 0, PINGS = 10;
+  function doPing(i) {
+    var t0 = Date.now();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', PING_URL + '&nc=' + t0 + '_' + i, true);
+    xhr.timeout = 5000;
+    xhr.onload = function() {
+      var rtt = Date.now() - t0;
+      samples.push(rtt); done++;
+      setGauge(rtt, '#4ab3f5', 300);
+      document.getElementById('lat-val').textContent = rtt.toString();
+      if (done >= PINGS) finish(); else setTimeout(function() { doPing(done); }, 60);
+    };
+    xhr.onerror = xhr.ontimeout = function() {
+      done++;
+      if (done >= PINGS) finish(); else setTimeout(function() { doPing(done); }, 60);
+    };
+    xhr.send(null);
+  }
+  function finish() {
+    if (!samples.length) { callback(999, 0); return; }
+    samples.sort(function(a, b) { return a - b; });
+    var median = samples[Math.floor(samples.length / 2)];
+    var jitter = 0;
+    for (var i = 0; i < samples.length; i++) jitter += Math.abs(samples[i] - median);
+    callback(median, jitter / samples.length);
+  }
+  doPing(0);
+}
+
+function runDownloadTest(callback, onProgress) {
+  // Warm-up run (discarded)
+  var warmup = new XMLHttpRequest();
+  warmup.open('GET', DL_WARM + '&nc=' + Date.now(), true);
+  warmup.responseType = 'arraybuffer';
+  warmup.timeout = 20000;
+  warmup.onload = function() { measureDownload(callback, onProgress); };
+  warmup.onerror = warmup.ontimeout = function() { measureDownload(callback, onProgress); };
+  warmup.send(null);
+}
+
+function measureDownload(callback, onProgress) {
+  var t0 = Date.now(), loadedBytes = 0;
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', DL_MAIN + '&nc=' + Date.now(), true);
+  xhr.responseType = 'arraybuffer';
+  xhr.timeout = 60000;
+  xhr.onprogress = function(e) {
+    loadedBytes = e.loaded || loadedBytes;
+    var elapsed = (Date.now() - t0) / 1000;
+    if (elapsed > 0.2 && loadedBytes > 0) {
+      var mbps = (loadedBytes * 8) / elapsed / 1000000;
+      if (onProgress) onProgress(mbps);
+    }
+  };
+  xhr.onload = function() {
+    var bytes = (this.response && this.response.byteLength) || loadedBytes || 25000000;
+    var elapsed = (Date.now() - t0) / 1000;
+    callback(elapsed > 0 ? (bytes * 8) / elapsed / 1000000 : 0);
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    var elapsed = (Date.now() - t0) / 1000;
+    callback(loadedBytes > 0 && elapsed > 0 ? (loadedBytes * 8) / elapsed / 1000000 : 0);
+  };
+  xhr.send(null);
+}
+
+function runUploadTest(callback) {
+  // 2 MB of non-compressible data
+  var size = 2 * 1024 * 1024;
+  var data = new ArrayBuffer(size);
+  var view = new Uint8Array(data);
+  var x = 12345;
+  for (var i = 0; i < size; i++) {
+    x = (x * 1103515245 + 12345) & 0x7fffffff;
+    view[i] = x & 0xff;
+  }
+  var t0 = Date.now();
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', UL_URL, true);
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.timeout = 30000;
+  xhr.upload.onprogress = function(e) {
+    var elapsed = (Date.now() - t0) / 1000;
+    if (elapsed > 0 && e.loaded > 0) {
+      var mbps = (e.loaded * 8) / elapsed / 1000000;
+      setGauge(mbps, '#f59e0b', niceMax(Math.max(mbps * 1.5, 10)));
+      document.getElementById('gauge-label').textContent = 'Upload';
+      document.getElementById('ul-val').textContent = mbps.toFixed(1);
+    }
+  };
+  xhr.onload = xhr.onerror = xhr.ontimeout = function() {
+    var elapsed = (Date.now() - t0) / 1000;
+    callback(elapsed > 0 ? (size * 8) / elapsed / 1000000 : 0);
+  };
+  xhr.send(data);
+}
+
+function finishSpeedTest() {
+  state.speedRunning = false;
+  var btn = document.getElementById('start-btn');
+  btn.disabled = false; btn.textContent = 'Test Again'; btn.className = 'start-btn focused';
+  console.log('Speed test complete');
+}
+
+// ─── Network Info ────────────────────────────────────────────────────────────
+function loadNetworkInfo() {
+  document.getElementById('ic-type-val').textContent = 'Loading…';
+
+  lunaCall('com.webos.service.connectionmanager', 'getStatus', {}, function(res) {
+    console.log('connectionmanager:', JSON.stringify(res));
+
+    var wiredOk = !!(res.wired && res.wired.state === 'connected');
+    var wifiOk  = !!(res.wifi  && res.wifi.state  === 'connected');
+
+    var connType = 'No Connection';
+    var ip = '—', mask = '—', mac = '—', gw = '—', dns = '—';
+    var ssid = '—', signal = null, channel = '—';
+
+    if (wiredOk) {
+      connType = 'Wired (Ethernet)';
+      var w = res.wired;
+      ip   = w.ipAddress  || '—';
+      mask = w.netmask    || '—';
+      mac  = w.macAddress || '—';
+      gw   = w.gateway    || '—';
+      dns  = buildDnsStr(w);
+      state.tvLocalIp = ip;
+      state.tvGateway = gw;
+    }
+
+    if (wifiOk) {
+      connType = wiredOk ? 'Wired + Wi-Fi' : 'Wi-Fi';
+      var wf = res.wifi;
+      // Always populate display fields from Wi-Fi when wired isn't the primary
+      if (!wiredOk) {
+        ip   = wf.ipAddress  || '—';
+        mask = wf.netmask    || '—';
+        mac  = wf.macAddress || '—';
+        gw   = wf.gateway    || '—';
+        dns  = buildDnsStr(wf);
+        state.tvLocalIp = ip !== '—' ? ip : state.tvLocalIp;
+        state.tvGateway = gw !== '—' ? gw : state.tvGateway;
+      }
+      ssid    = wf.ssid || '—';
+      signal  = wf.signalStrength != null ? parseInt(wf.signalStrength, 10) : null;
+      channel = wf.channel ? 'Ch ' + wf.channel : '—';
+    }
+
+    document.getElementById('ic-type-val').textContent  = connType;
+    document.getElementById('ic-ip-val').textContent    = ip;
+    document.getElementById('ic-mask-val').textContent  = mask;
+    document.getElementById('ic-mac-val').textContent   = mac;
+    document.getElementById('ic-gw-val').textContent    = gw;
+    document.getElementById('ic-dns-val').textContent   = dns;
+    document.getElementById('ic-ssid-val').textContent  = ssid;
+    document.getElementById('ic-chan-val').textContent  = channel;
+
+    if (signal !== null) {
+      document.getElementById('ic-signal-val').textContent = signal + ' / 100';
+      renderSignalBars(signal);
+    } else {
+      document.getElementById('ic-signal-val').textContent = '—';
+      renderSignalBars(0);
+    }
+
+    document.getElementById('conn-indicator').style.color =
+      res.isInternetConnectionAvailable ? '#22c55e' : '#ef4444';
+
+  }, function(err) {
+    document.getElementById('ic-type-val').textContent = 'Unavailable (simulator)';
+    console.warn('connectionmanager failed:', JSON.stringify(err));
+  });
+
+  lunaCall('com.webos.service.tv.systemproperty', 'getSystemInfo',
+    {keys: ['modelName', 'firmwareVersion', 'sdkVersion']},
+    function(res) {
+      var model = res.modelName || '—';
+      if (res.firmwareVersion) model += '  fw ' + res.firmwareVersion;
+      if (res.sdkVersion) model += '  SDK ' + res.sdkVersion;
+      document.getElementById('ic-model-val').textContent = model;
+    },
+    function() { document.getElementById('ic-model-val').textContent = '—'; }
+  );
+}
+
+function buildDnsStr(iface) {
+  var parts = [];
+  if (iface.dns1) parts.push(iface.dns1);
+  if (iface.dns2) parts.push(iface.dns2);
+  return parts.length ? parts.join('   •   ') : '—';
+}
+
+function renderSignalBars(strength) {
+  var wrap = document.getElementById('ic-signal-bars');
+  wrap.innerHTML = '';
+  var thresholds = [20, 40, 60, 80, 100];
+  for (var i = 0; i < thresholds.length; i++) {
+    var bar = document.createElement('div');
+    bar.className = 'signal-bar' + (strength >= thresholds[i] ? ' lit' : '');
+    bar.style.height = (14 + i * 5) + 'px';
+    wrap.appendChild(bar);
+  }
+}
+
+// ─── LAN Scanner ─────────────────────────────────────────────────────────────
+var scanDevices  = [];
+var scanQueue    = [];
+var scanInFlight = 0;
+var scanDone     = 0;
+var scanTotal    = 0;
+var CONCURRENCY  = 20;
+var PROBE_MS     = 600;   // timeout per XHR probe
+var FAST_MS      = 500;   // threshold: faster error = host is up
+
+function startScan() {
+  if (state.scanRunning) return;
+  if (!state.tvLocalIp) {
+    document.getElementById('scan-status').textContent = 'Getting network info…';
+    lunaCall('com.webos.service.connectionmanager', 'getStatus', {}, function(res) {
+      var ip = null, gw = null;
+      if (res.wired && res.wired.state === 'connected')      { ip = res.wired.ipAddress; gw = res.wired.gateway; }
+      else if (res.wifi && res.wifi.state === 'connected')   { ip = res.wifi.ipAddress;  gw = res.wifi.gateway;  }
+      state.tvLocalIp = ip || '192.168.1.100';
+      state.tvGateway = gw || '';
+      doStartScan();
+    }, function() {
+      state.tvLocalIp = '192.168.1.100';
+      state.tvGateway = '192.168.1.1';
+      doStartScan();
+    });
+    return;
+  }
+  doStartScan();
+}
+
+function doStartScan() {
+  state.scanRunning = true;
+  state.scanAborted = false;
+  scanDevices = []; scanQueue = []; scanDone = 0; scanInFlight = 0;
+
+  var btn = document.getElementById('scan-btn');
+  btn.disabled = true; btn.textContent = 'Scanning…';
+  document.getElementById('scan-bar').style.width = '0%';
+  document.getElementById('device-list').innerHTML = '';
+
+  var parts  = state.tvLocalIp.split('.');
+  var prefix = parts[0] + '.' + parts[1] + '.' + parts[2] + '.';
+  scanTotal  = 254;
+
+  for (var i = 1; i <= 254; i++) scanQueue.push(prefix + i);
+
+  document.getElementById('scan-status').textContent = 'Scanning ' + prefix + '1–254';
+  console.log('Starting LAN scan on', prefix + '1-254');
+
+  for (var j = 0; j < CONCURRENCY; j++) probeNext();
+}
+
+function probeNext() {
+  if (state.scanAborted || scanQueue.length === 0) return;
+  var ip = scanQueue.shift();
+  scanInFlight++;
+
+  var t0 = Date.now();
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'http://' + ip + '/', true);
+  xhr.timeout = PROBE_MS;
+
+  function done(up, port) {
+    scanInFlight--;
+    scanDone++;
+    if (up) addDevice(ip, Date.now() - t0, port || 80);
+    updateScanProgress();
+    probeNext();
+    if (scanDone >= scanTotal && scanInFlight === 0) finishScan();
+  }
+
+  xhr.onload = function() { done(true, 80); };
+  xhr.onerror = function() {
+    var elapsed = Date.now() - t0;
+    done(elapsed < FAST_MS, 80);
+  };
+  xhr.ontimeout = function() {
+    // Port 80 timed out — try 8080 before giving up
+    var t1 = Date.now();
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', 'http://' + ip + ':8080/', true);
+    xhr2.timeout = 400;
+    xhr2.onload  = function() { done(true, 8080); };
+    xhr2.onerror = function() { done(Date.now() - t1 < FAST_MS, 8080); };
+    xhr2.ontimeout = function() { done(false, 80); };
+    xhr2.send(null);
+  };
+  xhr.send(null);
+}
+
+function updateScanProgress() {
+  var pct = (scanDone / scanTotal * 100).toFixed(0);
+  document.getElementById('scan-bar').style.width = pct + '%';
+  var found = scanDevices.length;
+  document.getElementById('scan-status').textContent =
+    scanDone + ' / ' + scanTotal + (found ? '   ·   ' + found + ' found' : '');
+}
+
+function addDevice(ip, rtt, port) {
+  for (var i = 0; i < scanDevices.length; i++) {
+    if (scanDevices[i].ip === ip) return; // deduplicate
+  }
+  var dev = {ip: ip, rtt: rtt, port: port, role: getDeviceRole(ip)};
+  scanDevices.push(dev);
+  renderDevice(dev);
+  console.log('Device found:', ip, rtt + 'ms', 'port:' + port);
+}
+
+function getDeviceRole(ip) {
+  if (state.tvGateway && ip === state.tvGateway) return 'gateway';
+  if (state.tvLocalIp && ip === state.tvLocalIp) return 'self';
+  var last = parseInt(ip.split('.').pop(), 10);
+  if (last === 1 || last === 254) return 'gateway';
+  return 'device';
+}
+
+function renderDevice(dev) {
+  var list = document.getElementById('device-list');
+  // Remove placeholder
+  var msg = document.getElementById('no-devices-msg');
+  if (msg) msg.parentNode.removeChild(msg);
+
+  var roleLabel  = {gateway: 'Router / Gateway', self: 'This TV', device: 'Network Device'};
+  var roleClass  = {gateway: 'gateway-role',     self: 'self-role', device: 'default-role'};
+  var cardClass  = {gateway: ' gateway',          self: ' self',     device: ''};
+
+  var card = document.createElement('div');
+  card.className = 'device-card' + cardClass[dev.role];
+  card.innerHTML =
+    '<div class="device-ip">'  + esc(dev.ip) + '</div>' +
+    '<div class="device-role ' + roleClass[dev.role] + '">' + roleLabel[dev.role] + '</div>' +
+    '<div class="device-tags">' +
+      '<span class="device-tag open">:' + dev.port + '</span>' +
+      '<span class="device-tag">'      + dev.rtt  + ' ms</span>' +
+    '</div>';
+  list.appendChild(card);
+}
+
+function finishScan() {
+  if (!state.scanRunning) return;
+  state.scanRunning = false;
+  var btn = document.getElementById('scan-btn');
+  btn.disabled = false; btn.textContent = 'Scan Again';
+  document.getElementById('scan-bar').style.width = '100%';
+  var c = scanDevices.length;
+  document.getElementById('scan-status').textContent =
+    'Done — ' + c + ' device' + (c !== 1 ? 's' : '') + ' found';
+  if (c === 0) {
+    document.getElementById('device-list').innerHTML =
+      '<div class="no-devices">No devices responded.<br>Check network connectivity.</div>';
+  }
+  console.log('Scan complete, found:', c);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+var hidden, visibilityChange;
+if      (typeof document.hidden       !== 'undefined') { hidden = 'hidden';       visibilityChange = 'visibilitychange'; }
+else if (typeof document.webkitHidden !== 'undefined') { hidden = 'webkitHidden'; visibilityChange = 'webkitvisibilitychange'; }
+if (visibilityChange) {
+  document.addEventListener(visibilityChange, function() {
+    if (document[hidden] && state.scanRunning) {
+      state.scanAborted = true; state.scanRunning = false;
+    }
+  }, true);
+}
+
+// webOSLaunch: read params only — do NOT re-call init()
+document.addEventListener('webOSLaunch', function(e) {
+  console.log('webOSLaunch', JSON.stringify(e.detail));
+}, true);
+
+document.addEventListener('webOSRelaunch', function(e) {
+  console.log('webOSRelaunch', JSON.stringify(e.detail));
+}, true);
+
+// ─── Init (called once) ──────────────────────────────────────────────────────
+function init() {
+  switchTab(0);
+  loadNetworkInfo();
+  console.log('Net Scout initialized');
+}
+
+init();
+</script>
+</body>
+</html>

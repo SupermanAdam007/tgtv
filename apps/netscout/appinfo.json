@@ -1,0 +1,15 @@
+{
+  "id": "com.tgtv.netscout",
+  "version": "0.0.1",
+  "vendor": "tgtv",
+  "type": "web",
+  "main": "index.html",
+  "title": "Net Scout",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#0d0d0d",
+  "requiredPermissions": [
+    "time.query",
+    "activity.operation"
+  ]
+}
