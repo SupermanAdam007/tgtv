@@ -88,6 +88,36 @@ Required in every app. Must exist at app root. Used by the system to identify, i
 | `splashBackground` | string | No | Path to splash screen image. |
 | `resolution` | string | No | App resolution. Defaults to `"1920x1080"`. |
 | `transparent` | boolean | No | Allow transparent background. Default: `false`. |
+| `requiredPermissions` | string[] | No | Luna service permissions. See section below. |
+| `trustLevel` | string | No | Runtime mode. See section below. Default: `"default"`. |
+| `inspectable` | boolean | No | Allow Chrome DevTools debugging. Default: `true` for Developer Mode apps, `false` otherwise. |
+
+### `requiredPermissions`
+
+Declares which Luna service ACG (Access Control Group) permissions the app needs. These are **Luna service permissions only** — there is no permission for browser APIs like `getUserMedia`, WebRTC, or camera/microphone capture.
+
+Common values:
+
+| Permission | Grants access to |
+|------------|-----------------|
+| `time.query` | System time service |
+| `activity.operation` | Activity manager |
+| `applications.operation` | Application manager (launch/close other apps) |
+| `settings.read` | Read system settings |
+| `deviceid.query` | Device unique ID |
+
+There is **no** `media.capture`, `audiocapture`, `microphone`, or similar permission. Microphone/camera access via `getUserMedia` is blocked at the platform level for non-partner apps regardless of permissions. See the `webostv-browser-capabilities` skill for details.
+
+### `trustLevel`
+
+Determines the application runtime mode. For user-installed apps, only two values are supported:
+
+| Value | Effect |
+|-------|--------|
+| `"default"` | Normal mode. Full API access including `window.PalmServiceBridge`. |
+| `"netcast"` | **Restricted** mode. `window.PalmServiceBridge` is missing. `window.launchParams` replaces `window.PalmSystem.launchParams`. Custom User-Agent and CORS whitelist options become available via `vendorExtensions`. |
+
+`"netcast"` **limits** API access — it does not grant additional permissions. Use `"default"` unless you specifically need netcast-mode features (custom User-Agent, cross-domain CORS bypass).
 
 ### `handlesRelaunch` behavior
 

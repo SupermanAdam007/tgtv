@@ -2,47 +2,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Voice FX</title>
+<title>Zm\u011bna hlasu</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style type="text/css">
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    min-height: 100%;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
     background: #0d0d0d;
     color: #ececec;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 22px;
   }
   .wrap {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 28px 40px 48px;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    padding: 50px 80px 40px;
   }
   h1 {
-    font-size: 1.4em;
+    font-size: 42px;
     font-weight: 700;
-    margin: 0 0 4px;
+    margin: 0 0 28px;
     letter-spacing: 0.02em;
-  }
-  .sub {
-    font-size: 0.7em;
-    color: #9aa0a6;
-    margin: 0 0 20px;
-    line-height: 1.45;
+    text-align: center;
   }
 
   /* --- waveform --- */
   .viz-wrap {
     width: 100%;
-    height: 130px;
+    height: 160px;
     background: #111;
-    border-radius: 10px;
-    border: 1px solid #222;
-    margin-bottom: 24px;
+    border-radius: 16px;
+    border: 1px solid #1e1e1e;
+    margin-bottom: 32px;
     overflow: hidden;
+    flex-shrink: 0;
   }
   canvas#viz {
     display: block;
@@ -54,109 +52,69 @@
   .fx-grid {
     display: flex;
     flex-wrap: wrap;
-    margin: 0 -8px 20px;
+    justify-content: center;
+    margin: 0 -12px 36px;
+    flex-shrink: 0;
   }
   .fx-btn {
-    width: calc(25% - 16px);
-    margin: 8px;
-    padding: 22px 14px 18px;
-    border-radius: 12px;
-    border: 2px solid #3c4043;
-    background: #161616;
+    width: calc(25% - 24px);
+    margin: 12px;
+    padding: 28px 16px 24px;
+    border-radius: 16px;
+    border: 3px solid #2a2a2a;
+    background: #141414;
     color: #ececec;
-    font-size: 1em;
+    font-size: 28px;
     cursor: pointer;
     text-align: center;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   }
   .fx-btn:focus {
     outline: none;
-    border-color: #8ab4f8;
-  }
-  .fx-btn:hover {
-    border-color: #555;
+    border-color: #fff;
+    background: #1e1e1e;
   }
   .fx-btn .fx-icon {
     display: block;
-    margin: 0 auto 10px;
-    width: 48px;
-    height: 48px;
+    margin: 0 auto 14px;
+    width: 64px;
+    height: 64px;
     opacity: 0.7;
   }
   .fx-btn .fx-name {
     display: block;
     font-weight: 700;
-    font-size: 1.05em;
-    margin-bottom: 5px;
-  }
-  .fx-btn .fx-desc {
-    display: block;
-    font-size: 0.6em;
-    color: #777;
-    line-height: 1.35;
+    font-size: 28px;
   }
 
-  /* --- controls bar --- */
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 16px;
+  /* --- mic button --- */
+  .mic-wrap {
+    text-align: center;
+    margin-bottom: 24px;
+    flex-shrink: 0;
   }
-  .btn-control {
+  .btn-mic {
     border: none;
-    border-radius: 8px;
-    padding: 16px 32px;
-    font-size: 0.9em;
+    border-radius: 16px;
+    padding: 28px 80px;
+    font-size: 32px;
     font-weight: 700;
     cursor: pointer;
-    min-height: 52px;
+    letter-spacing: 0.02em;
   }
-  .btn-control:focus {
-    outline: 2px solid #8ab4f8;
-    outline-offset: 2px;
+  .btn-mic:focus {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
   }
-  .btn-primary { background: #8ab4f8; color: #0d0d0d; }
-  .btn-danger  { background: #f28b82; color: #0d0d0d; }
-
-  .vol-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .vol-wrap label {
-    font-size: 0.75em;
-    color: #9aa0a6;
-  }
-  input[type="range"] {
-    width: 180px;
-    cursor: pointer;
-  }
-  .vol-val {
-    font-size: 0.75em;
-    color: #b0b6bc;
-    min-width: 36px;
-    text-align: right;
-  }
+  .btn-mic-start { background: #8ab4f8; color: #0d0d0d; }
+  .btn-mic-stop  { background: #f28b82; color: #0d0d0d; }
 
   /* --- status --- */
   .status {
-    padding: 12px 16px;
-    border-radius: 6px;
-    background: #141414;
-    border: 1px solid #222;
-    font-size: 0.75em;
-    min-height: 1.4em;
-    word-break: break-word;
-    color: #9aa0a6;
-  }
-
-  .hint {
-    font-size: 0.6em;
+    text-align: center;
+    font-size: 24px;
     color: #666;
-    margin-top: 20px;
-    line-height: 1.5;
+    flex-shrink: 0;
   }
 </style>
 <script type="text/javascript">
@@ -178,6 +136,20 @@
 })();
 
 var LOG_P = '[voice-fx]';
+
+/* ===== getUserMedia polyfill for webOS 3.x (Chrome 38) ===== */
+
+(function() {
+  if (!navigator.mediaDevices) navigator.mediaDevices = {};
+  if (!navigator.mediaDevices.getUserMedia) {
+    var gum = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    if (gum) {
+      navigator.mediaDevices.getUserMedia = function(c) {
+        return new Promise(function(ok, fail) { gum.call(navigator, c, ok, fail); });
+      };
+    }
+  }
+})();
 
 /* ===== state ===== */
 
@@ -545,56 +517,152 @@ function drawLoop() {
 
 /* ===== mic start / stop ===== */
 
+function onMicStream(stream) {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  micStream = stream;
+
+  audioCtx = new AC();
+  micSource = audioCtx.createMediaStreamSource(stream);
+
+  analyserNode = audioCtx.createAnalyser();
+  analyserNode.fftSize = 2048;
+
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 1.0;
+  masterGain.connect(audioCtx.destination);
+
+  applyEffect(currentFx);
+
+  isActive = true;
+  $('btnMic').disabled = false;
+  $('btnMic').textContent = 'Zastavit mikrofon';
+  $('btnMic').className = 'btn-mic btn-mic-stop';
+  setStatus('');
+
+  sizeCanvas();
+  drawLoop();
+
+  console.log(LOG_P, 'mic started, tracks:', stream.getAudioTracks().length);
+}
+
+function onMicError(err) {
+  var msg = (err && err.name) || (err && err.message) || String(err);
+  var cn = (err && err.constraintName) || '(none)';
+  var em = (err && err.message) || '(none)';
+  console.warn(LOG_P, 'getUserMedia error name:', err && err.name);
+  console.warn(LOG_P, 'getUserMedia error constraintName:', cn);
+  console.warn(LOG_P, 'getUserMedia error message:', em);
+  setStatus('Chyba: ' + msg + ' [' + cn + ']');
+  $('btnMic').disabled = false;
+  if (audioCtx) {
+    try { audioCtx.close(); } catch (e) {}
+    audioCtx = null;
+  }
+}
+
+function logAudioSources() {
+  if (typeof MediaStreamTrack !== 'undefined' && MediaStreamTrack.getSources) {
+    MediaStreamTrack.getSources(function(sources) {
+      console.log(LOG_P, 'MediaStreamTrack.getSources count:', sources.length);
+      for (var i = 0; i < sources.length; i++) {
+        console.log(LOG_P, 'source[' + i + ']:', sources[i].kind, sources[i].id, sources[i].label, sources[i].facing);
+      }
+    });
+  } else {
+    console.log(LOG_P, 'MediaStreamTrack.getSources not available');
+  }
+  if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    navigator.mediaDevices.enumerateDevices().then(function(devices) {
+      console.log(LOG_P, 'enumerateDevices count:', devices.length);
+      for (var i = 0; i < devices.length; i++) {
+        console.log(LOG_P, 'device[' + i + ']:', devices[i].kind, devices[i].deviceId, devices[i].label);
+      }
+    });
+  } else {
+    console.log(LOG_P, 'enumerateDevices not available');
+  }
+}
+
 function startMic() {
   if (isActive) return;
 
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    console.warn(LOG_P, 'getUserMedia unavailable');
-    setStatus('Microphone not available in this environment.');
-    return;
-  }
-
   var AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) {
-    setStatus('Web Audio API not supported.');
+    setStatus('Web Audio API nen\u00ed podporov\u00e1no');
     return;
   }
 
-  setStatus('Requesting microphone\u2026');
+  setStatus('Hled\u00e1n\u00ed mikrofonu\u2026');
+  $('btnMic').disabled = true;
 
-  audioCtx = new AC();
+  var legacyGum = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+  console.log(LOG_P, 'webkitGetUserMedia:', !!navigator.webkitGetUserMedia);
+  console.log(LOG_P, 'AudioContext:', !!AC);
 
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
-    micStream = stream;
-    micSource = audioCtx.createMediaStreamSource(stream);
-
-    analyserNode = audioCtx.createAnalyser();
-    analyserNode.fftSize = 2048;
-
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = parseInt($('volume').value, 10) / 100;
-    masterGain.connect(audioCtx.destination);
-
-    applyEffect(currentFx);
-
-    isActive = true;
-    $('btnMic').textContent = 'Stop Microphone';
-    $('btnMic').className = 'btn-control btn-danger';
-    setStatus('Microphone active \u2014 pick an effect below.');
-
-    sizeCanvas();
-    drawLoop();
-
-    console.log(LOG_P, 'mic started');
-  }).catch(function(err) {
-    var msg = err && err.message ? err.message : String(err);
-    console.warn(LOG_P, 'getUserMedia error', msg);
-    setStatus('Microphone error: ' + msg);
-    if (audioCtx) {
-      try { audioCtx.close(); } catch (e) {}
-      audioCtx = null;
+  function tryWithSources(sources) {
+    var audioSources = [];
+    for (var i = 0; i < sources.length; i++) {
+      if (sources[i].kind === 'audio') audioSources.push(sources[i]);
     }
-  });
+    console.log(LOG_P, 'audio sources:', audioSources.length);
+
+    var attempt = 0;
+    function tryNext() {
+      if (attempt > audioSources.length) {
+        setStatus('Mikrofon nen\u00ed dostupn\u00fd');
+        $('btnMic').disabled = false;
+        return;
+      }
+
+      var constraints;
+      if (attempt < audioSources.length) {
+        var sid = audioSources[attempt].id;
+        console.log(LOG_P, 'trying source', attempt, sid);
+        constraints = {
+          audio: { optional: [{ sourceId: sid }] },
+          video: false
+        };
+      } else {
+        console.log(LOG_P, 'trying plain {audio:true}');
+        constraints = { audio: true, video: false };
+      }
+
+      setStatus('Zkou\u0161\u00edm mikrofon ' + (attempt + 1) + '/' + (audioSources.length + 1) + '\u2026');
+
+      try {
+        legacyGum.call(navigator, constraints, onMicStream, function(err) {
+          var msg = (err && err.name) || String(err);
+          console.warn(LOG_P, 'source', attempt, 'failed:', msg);
+          attempt++;
+          tryNext();
+        });
+      } catch (e) {
+        console.warn(LOG_P, 'source', attempt, 'threw:', e);
+        attempt++;
+        tryNext();
+      }
+    }
+    tryNext();
+  }
+
+  if (!legacyGum) {
+    console.warn(LOG_P, 'no getUserMedia API found');
+    setStatus('Mikrofon nen\u00ed dostupn\u00fd');
+    $('btnMic').disabled = false;
+    return;
+  }
+
+  if (typeof MediaStreamTrack !== 'undefined' && MediaStreamTrack.getSources) {
+    MediaStreamTrack.getSources(function(sources) {
+      console.log(LOG_P, 'getSources count:', sources.length);
+      for (var i = 0; i < sources.length; i++) {
+        console.log(LOG_P, 'src[' + i + ']:', sources[i].kind, sources[i].id, sources[i].label || '(no label)');
+      }
+      tryWithSources(sources);
+    });
+  } else {
+    tryWithSources([]);
+  }
 }
 
 function stopMic() {
@@ -629,13 +697,13 @@ function stopMic() {
   }
 
   isActive = false;
-  $('btnMic').textContent = 'Start Microphone';
-  $('btnMic').className = 'btn-control btn-primary';
+  $('btnMic').textContent = 'Spustit mikrofon';
+  $('btnMic').className = 'btn-mic btn-mic-start';
 
   var c = $('viz').getContext('2d');
   c.clearRect(0, 0, $('viz').width, $('viz').height);
 
-  setStatus('Microphone stopped.');
+  setStatus('');
   console.log(LOG_P, 'mic stopped');
 }
 
@@ -647,19 +715,10 @@ function toggleMic() {
 
 window.onload = function() {
   sizeCanvas();
-  setStatus('Press Start Microphone, then choose an effect.');
+  setStatus('');
   updateActiveButton();
 
   $('btnMic').onclick = toggleMic;
-
-  var volSlider = $('volume');
-  function onVol() {
-    var pct = parseInt(volSlider.value, 10);
-    $('volLabel').textContent = pct + '%';
-    if (masterGain) masterGain.gain.value = pct / 100;
-  }
-  volSlider.oninput = onVol;
-  volSlider.onchange = onVol;
 
   var btns = document.querySelectorAll('.fx-btn');
   for (var i = 0; i < btns.length; i++) {
@@ -670,7 +729,7 @@ window.onload = function() {
         currentFx = fx;
         if (isActive) {
           applyEffect(fx);
-          setStatus('Effect: ' + btn.querySelector('.fx-name').textContent);
+          setStatus('');
         } else {
           updateActiveButton();
         }
@@ -693,6 +752,61 @@ window.onload = function() {
     }, true);
   }
 
+  /* D-pad navigation for TV remote */
+  var COLS = 4;
+  var fxBtns = document.querySelectorAll('.fx-btn');
+  var micBtn = $('btnMic');
+  var allNav = [];
+  for (var n = 0; n < fxBtns.length; n++) allNav.push(fxBtns[n]);
+  allNav.push(micBtn);
+
+  function navIndex() {
+    var active = document.activeElement;
+    for (var j = 0; j < allNav.length; j++) {
+      if (allNav[j] === active) return j;
+    }
+    return -1;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    var key = e.keyCode;
+    var idx = navIndex();
+
+    if (key === 37 || key === 38 || key === 39 || key === 40) {
+      e.preventDefault();
+      var next = idx;
+      var fxCount = fxBtns.length;
+      var micIdx = allNav.length - 1;
+
+      if (idx < 0) {
+        next = 0;
+      } else if (key === 39) {
+        if (idx < fxCount - 1) next = idx + 1;
+        else if (idx === fxCount - 1) next = micIdx;
+      } else if (key === 37) {
+        if (idx === micIdx) next = fxCount - 1;
+        else if (idx > 0) next = idx - 1;
+      } else if (key === 40) {
+        if (idx < fxCount - COLS) next = idx + COLS;
+        else next = micIdx;
+      } else if (key === 38) {
+        if (idx === micIdx) next = fxCount - Math.floor(COLS / 2);
+        else if (idx >= COLS) next = idx - COLS;
+      }
+
+      if (next >= 0 && next < allNav.length) allNav[next].focus();
+    }
+
+    if (key === 13 || key === 32) {
+      if (idx >= 0) {
+        e.preventDefault();
+        allNav[idx].click();
+      }
+    }
+  }, true);
+
+  if (fxBtns.length) fxBtns[0].focus();
+
   document.addEventListener('webOSLaunch', function(e) {
     console.log(LOG_P, 'webOSLaunch', JSON.stringify(e.detail || {}));
   }, true);
@@ -701,11 +815,7 @@ window.onload = function() {
 </head>
 <body>
   <div class="wrap">
-    <h1>Voice FX</h1>
-    <p class="sub">
-      Real-time microphone voice distortion.
-      Start the mic, pick an effect, and hear your transformed voice through the TV speakers.
-    </p>
+    <h1>Zm&#283;na hlasu</h1>
 
     <div class="viz-wrap">
       <canvas id="viz"></canvas>
@@ -713,17 +823,16 @@ window.onload = function() {
 
     <div class="fx-grid">
       <button type="button" class="fx-btn" data-fx="clean">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#8ab4f8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#8ab4f8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="16" y="6" width="16" height="24" rx="8"/>
           <path d="M12 24c0 6.6 5.4 12 12 12s12-5.4 12-12"/>
           <line x1="24" y1="36" x2="24" y2="43"/>
           <line x1="17" y1="43" x2="31" y2="43"/>
         </svg></span>
-        <span class="fx-name">Clean</span>
-        <span class="fx-desc">No effect, natural voice</span>
+        <span class="fx-name">&#268;ist&#253;</span>
       </button>
       <button type="button" class="fx-btn" data-fx="robot">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#ff9800" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#ff9800" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="10" y="14" width="28" height="24" rx="4"/>
           <line x1="24" y1="6" x2="24" y2="14"/>
           <circle cx="24" cy="5" r="2.5"/>
@@ -734,21 +843,19 @@ window.onload = function() {
           <line x1="42" y1="22" x2="38" y2="26"/>
         </svg></span>
         <span class="fx-name">Robot</span>
-        <span class="fx-desc">Ring modulation</span>
       </button>
       <button type="button" class="fx-btn" data-fx="echo">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#26c6da" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#26c6da" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 24c0-3.3 2.7-6 6-6h1v12h-1c-3.3 0-6-2.7-6-6z"/>
           <path d="M19 18v12"/>
           <path d="M25 14a10 10 0 0 1 0 20"/>
           <path d="M30 9a16 16 0 0 1 0 30"/>
           <path d="M35 5a22 22 0 0 1 0 38"/>
         </svg></span>
-        <span class="fx-name">Echo</span>
-        <span class="fx-desc">Delay with feedback</span>
+        <span class="fx-name">Ozvěna</span>
       </button>
       <button type="button" class="fx-btn" data-fx="radio">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#fdd835" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#fdd835" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="6" y="18" width="36" height="24" rx="4"/>
           <circle cx="32" cy="30" r="6"/>
           <line x1="12" y1="26" x2="22" y2="26"/>
@@ -757,11 +864,10 @@ window.onload = function() {
           <line x1="14" y1="18" x2="32" y2="6"/>
           <circle cx="33" cy="5.5" r="2"/>
         </svg></span>
-        <span class="fx-name">Radio</span>
-        <span class="fx-desc">Bandpass + compression</span>
+        <span class="fx-name">R&#225;dio</span>
       </button>
       <button type="button" class="fx-btn" data-fx="alien">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#66bb6a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#66bb6a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <ellipse cx="24" cy="26" rx="14" ry="16"/>
           <ellipse cx="17" cy="22" rx="5" ry="3"/>
           <ellipse cx="31" cy="22" rx="5" ry="3"/>
@@ -771,21 +877,19 @@ window.onload = function() {
           <line x1="16" y1="10" x2="13" y2="3"/>
           <line x1="32" y1="10" x2="35" y2="3"/>
         </svg></span>
-        <span class="fx-name">Alien</span>
-        <span class="fx-desc">Flanger / chorus</span>
+        <span class="fx-name">Mimo&#382;em&#353;&#357;an</span>
       </button>
       <button type="button" class="fx-btn" data-fx="monster">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#ef5350" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#ef5350" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M8 18c0-9 7-14 16-14s16 5 16 14v6c0 10-6 18-16 18S8 34 8 24z"/>
           <circle cx="17" cy="20" r="3" fill="#ef5350" stroke="none"/>
           <circle cx="31" cy="20" r="3" fill="#ef5350" stroke="none"/>
           <path d="M14 30l3-4 4 4 3-4 3 4 4-4 3 4"/>
         </svg></span>
-        <span class="fx-name">Monster</span>
-        <span class="fx-desc">Heavy distortion</span>
+        <span class="fx-name">P&#345;&#237;&#353;era</span>
       </button>
       <button type="button" class="fx-btn" data-fx="cathedral">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#ce93d8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#ce93d8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M24 4L8 18v24h32V18z"/>
           <path d="M24 4l4 3"/>
           <path d="M24 4l-4 3"/>
@@ -796,34 +900,21 @@ window.onload = function() {
           <circle cx="14" cy="25" r="2.5"/>
           <circle cx="34" cy="25" r="2.5"/>
         </svg></span>
-        <span class="fx-name">Cathedral</span>
-        <span class="fx-desc">Reverb simulation</span>
+        <span class="fx-name">Katedr&#225;la</span>
       </button>
       <button type="button" class="fx-btn" data-fx="tremolo">
-        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#f48fb1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <span class="fx-icon"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 48 48" fill="none" stroke="#f48fb1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 24c2-8 5-14 8 0s5 8 8 0 5-14 8 0 5 8 8 0 5-14 8 0"/>
         </svg></span>
         <span class="fx-name">Tremolo</span>
-        <span class="fx-desc">Amplitude wobble</span>
       </button>
     </div>
 
-    <div class="controls">
-      <button type="button" class="btn-control btn-primary" id="btnMic">Start Microphone</button>
-      <div class="vol-wrap">
-        <label for="volume">Volume</label>
-        <input type="range" id="volume" min="0" max="100" value="80">
-        <span class="vol-val" id="volLabel">80%</span>
-      </div>
+    <div class="mic-wrap">
+      <button type="button" class="btn-mic btn-mic-start" id="btnMic">Spustit mikrofon</button>
     </div>
 
     <div class="status" id="status"></div>
-
-    <p class="hint">
-      Use a USB microphone or the TV's built-in mic. To avoid feedback, lower the volume or keep the mic away from the speakers.
-      With <code>npm run log</code>, events are tagged <code>[voice-fx]</code> in <code>debug.log</code>.
-      The simulator may not provide audio input &mdash; test on a real TV for best results.
-    </p>
   </div>
 </body>
 </html>

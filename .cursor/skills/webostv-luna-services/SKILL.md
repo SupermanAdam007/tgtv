@@ -83,9 +83,67 @@ URI pattern: `luna://service.name/methodName`
 
 - BLE GATT: webOS TV 24+ only
 - Keymanager3: webOS TV 24+ only
-- Camera: deprecated since webOS TV 4.x
+- Camera Service: deprecated since webOS TV 4.x (see details below)
 - Magic Remote: full support on webOS TV 24+; partial on older versions
 - Emulator does not support DRM, BLE GATT, Keymanager3, or Magic Remote
+
+---
+
+## Camera Service (microphone/camera enumeration)
+
+**URI:** `luna://com.webos.service.camera`
+**Status:** Deprecated from webOS TV 4.0 onwards
+
+This service enumerates connected camera and microphone devices. It provides device **information only** — not audio/video streaming.
+
+### List connected devices
+
+```js
+webOS.service.request('luna://com.webos.service.camera', {
+  method: 'getList',
+  onSuccess: function(res) {
+    // res.uriList = [
+    //   { uri: 'camera://com.webos.service.camera/camera1', type: 'camera' },
+    //   { uri: 'camera://com.webos.service.camera/mic1', type: 'microphone' }
+    // ]
+    console.log('Devices:', JSON.stringify(res.uriList));
+  },
+  onFailure: function(err) {
+    console.error(err.errorCode, err.errorText);
+  }
+});
+```
+
+### Get device details
+
+```js
+webOS.service.request('luna://com.webos.service.camera', {
+  method: 'getInfo',
+  parameters: { uri: 'camera://com.webos.service.camera/mic1' },
+  onSuccess: function(res) {
+    // res.info = { name: 'BC600 Camera', type: 'microphone', builtin: true,
+    //              details: { samplingRate: 'WB', codec: 'PCM' } }
+    console.log('Mic info:', JSON.stringify(res.info));
+  },
+  onFailure: function(err) {
+    console.error(err.errorCode, err.errorText);
+  }
+});
+```
+
+### Important limitation
+
+The Camera Service only provides device enumeration and metadata. It does **not** provide audio capture or streaming. For actual microphone audio capture, see the `webostv-browser-capabilities` skill — `getUserMedia` is blocked for non-partner apps, and there is no Luna service alternative for real-time audio streaming in web apps.
+
+---
+
+## getUserMedia / WebRTC — not available
+
+`getUserMedia()` and WebRTC are **blocked for standard web apps** on all webOS TV versions. This is a platform-level restriction, not a permission issue. No Luna service call or `appinfo.json` configuration can unlock it.
+
+The Magic Remote microphone is handled by the OS voice recognition system and returns text only — there is no API to access raw audio from it.
+
+For workaround architectures (streaming mic audio from a phone), see the `webostv-browser-capabilities` skill.
 
 ### Simulator support
 
